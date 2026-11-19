@@ -1,1 +1,51 @@
 
+name: "Windows Runner with Tailscale"
+
+on:
+  workflow_dispatch:
+    inputs:
+      tailscale_key:
+        description: "Tailscale Auth Key"
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Windows Environment
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check Windows Environment
+        shell: pwsh
+        run: |
+          Write-Host "Windows runner is ready."
+          Write-Host "Computer Name: $env:COMPUTERNAME"
+          Write-Host "PowerShell Version:"
+          $PSVersionTable.PSVersion
+
+      - name: Install Tailscale
+        shell: pwsh
+        env:
+          TS_AUTHKEY: ${{ secrets.TS_AUTHKEY }}
+        run: |
+          if (-not $env:TS_AUTHKEY) {
+            throw "Configure TS_AUTHKEY in GitHub repository secrets."
+          }
+
+          $installer = "$env:TEMP\tailscale-setup.exe"
+
+          Invoke-WebRequest `
+            -Uri "https://pkgs.tailscale.com/stable/tailscale-setup-latest.exe" `
+            -OutFile $installer
+
+          Start-Process `
+            -FilePath $installer `
+            -ArgumentList "/quiet" `
+            -Wait
+
+          Write-Host "Tailscale installation completed."
+          
